@@ -1,0 +1,11 @@
+{
+  "name": "Example Dark",
+  "version": "0.1.0",
+  "description": "example.com をダークにするサンプル。",
+  "license": "MIT",
+  "vars": [
+    { "type": "color", "name": "bg", "label": "背景色", "default": "#111111" },
+    { "type": "color", "name": "fg", "label": "文字色", "default": "#e8e8e8" },
+    { "type": "color", "name": "accent", "label": "リンク色", "default": "#4da3ff" }
+  ]
+}

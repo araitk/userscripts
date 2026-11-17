@@ -1,0 +1,17 @@
+/* @var で定義した値は var(--名前) で参照できる */
+@-moz-document domain("example.com") {
+  html,
+  body {
+    background: var(--bg) !important;
+    color: var(--fg) !important;
+  }
+
+  body > div {
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  a {
+    color: var(--accent) !important;
+  }
+}
