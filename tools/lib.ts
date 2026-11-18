@@ -10,7 +10,7 @@ export const SEMVER_RE = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
 
 export type Kind = 'scripts' | 'styles';
 
-/** scripts/ か styles/ の直下にあるフォルダ名（kebab-case）を返す。 */
+/** Returns the folder names (kebab-case) directly under scripts/ or styles/. */
 export function listEntries(kind: Kind): string[] {
   const dir = join(root, kind);
   if (!existsSync(dir)) return [];
@@ -22,7 +22,7 @@ export function listEntries(kind: Kind): string[] {
 
 export async function loadScriptMeta(name: string): Promise<ScriptMeta> {
   const file = join(root, 'scripts', name, 'meta.ts');
-  // watch 中の再読み込みに備えてキャッシュを避ける
+  // Bypass the module cache so changes are picked up while watching
   const mod = await import(`${pathToFileURL(file).href}?t=${Date.now()}`);
   return mod.default as ScriptMeta;
 }
@@ -35,7 +35,7 @@ export function loadStyleMeta(name: string): StyleMeta {
 export const scriptFile = (name: string) => `scripts/${name}.user.js`;
 export const styleFile = (name: string) => `styles/${name}.user.css`;
 
-/** `// ==UserScript==` か `/* ==UserStyle==` ブロックを [key, value][] に分解する。 */
+/** Parses a `// ==UserScript==` or `/* ==UserStyle==` block into [key, value][]. */
 export function parseHeader(source: string): [string, string][] {
   const block = source.match(/==User(?:Script|Style)==([\s\S]*?)==\/User(?:Script|Style)==/);
   if (!block?.[1]) return [];

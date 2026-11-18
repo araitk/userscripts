@@ -1,21 +1,21 @@
 import type { MonkeyUserScript } from 'vite-plugin-monkey';
 
 /**
- * scripts/<name>/meta.ts で書くメタ情報。
- * namespace / author / updateURL / downloadURL / homepageURL はビルド時に自動で入る。
- * @grant は使った GM API から自動で付く（明示したい場合だけ書く）。
+ * Metadata written in scripts/<name>/meta.ts.
+ * namespace / author / updateURL / downloadURL / homepageURL are filled in at build time.
+ * @grant is added automatically from the GM APIs used (write it only to be explicit).
  */
 export type ScriptMeta = Omit<
   MonkeyUserScript,
   'namespace' | 'updateURL' | 'downloadURL' | 'homepageURL' | 'name' | 'version' | 'description'
 > & {
   name: string;
-  /** semver（例: 1.0.0） */
+  /** semver (e.g. 1.0.0) */
   version: string;
   description: string;
   /**
-   * GM_xmlhttpRequest で通信するホスト。ここに無いホストへの通信は、拡張機能によって
-   * 拒否されたり確認が出たりする。
+   * Hosts contacted with GM_xmlhttpRequest. Requests to hosts not listed here may be
+   * blocked or prompt for confirmation, depending on the extension.
    */
   connect?: string | string[];
 };
@@ -23,7 +23,7 @@ export type ScriptMeta = Omit<
 export const defineScriptMeta = (meta: ScriptMeta): ScriptMeta => meta;
 
 /**
- * UserCSS の @var。設定画面がない環境では既定値が使われるので、既定値だけで見た目が完成するようにしておく。
+ * UserCSS @var. Environments without a settings UI use the defaults, so the defaults alone must give a finished look.
  */
 export type StyleVar =
   | { type: 'color'; name: string; label: string; default: string }
@@ -31,7 +31,7 @@ export type StyleVar =
   | { type: 'number'; name: string; label: string; default: number }
   | { type: 'checkbox'; name: string; label: string; default: boolean };
 
-/** styles/<name>/meta.json の形。 */
+/** Shape of styles/<name>/meta.json. */
 export type StyleMeta = {
   name: string;
   version: string;

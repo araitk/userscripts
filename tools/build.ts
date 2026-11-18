@@ -5,7 +5,7 @@ import { checkMeta } from './check-meta.ts';
 import { genIndex } from './gen-index.ts';
 import { distDir } from './lib.ts';
 
-/** dist/ を作り直して、スクリプト・スタイル・一覧をすべてビルドする。 */
+/** Recreates dist/ and builds all scripts, styles and the index page. */
 export async function buildAll() {
   rmSync(distDir, { recursive: true, force: true });
   mkdirSync(distDir, { recursive: true });

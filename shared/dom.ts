@@ -1,5 +1,5 @@
 /**
- * selector に一致する要素が現れるまで待つ。SPA で後から描画される要素向け。
+ * Waits until an element matching selector appears. For elements rendered later in SPAs.
  */
 export function waitForElement<T extends Element = HTMLElement>(
   selector: string,
@@ -32,7 +32,7 @@ export function waitForElement<T extends Element = HTMLElement>(
   });
 }
 
-/** selector に一致する要素が追加されるたびに callback を呼ぶ（既存の要素にも呼ぶ）。 */
+/** Calls callback for each element matching selector as it is added (existing elements included). */
 export function onElement<T extends Element = HTMLElement>(
   selector: string,
   callback: (el: T) => void,

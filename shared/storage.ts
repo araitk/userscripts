@@ -1,6 +1,6 @@
 import { GM_getValue, GM_setValue } from '$';
 
-/** GM_getValue / GM_setValue を型付きで使うための小さなラッパー。 */
+/** Small typed wrapper around GM_getValue / GM_setValue. */
 export function createStore<T>(key: string, fallback: T) {
   return {
     get: (): T => GM_getValue<T>(key, fallback),

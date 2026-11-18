@@ -1,16 +1,27 @@
-import { createReadStream, existsSync, mkdirSync, rmSync, statSync, watch } from 'node:fs';
+import {
+  createReadStream,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  watch,
+} from 'node:fs';
 import { createServer } from 'node:http';
 import { networkInterfaces } from 'node:os';
 import { extname, join, normalize, sep } from 'node:path';
 import { site } from '../site.config.ts';
 import { buildScript } from './build-scripts.ts';
 import { buildStyles } from './build-styles.ts';
+import { devLoader } from './dev-loader.ts';
 import { genIndex } from './gen-index.ts';
 import { distDir, listEntries, root } from './lib.ts';
 
 /**
- * 開発用: 全部を watch ビルドしつつ dist/ を localhost で配信する。
- * @updateURL も localhost を向くので、拡張機能の「更新を確認」で最新版を取り込める。
+ * Development: watch-builds everything and serves dist/ on localhost.
+ *
+ * /dev/<name>.user.js serves the dev script. With it installed, every page load picks up
+ * the latest build, so saving and reloading the page is enough.
  */
 const port = Number(process.env.PORT ?? site.devPort);
 process.env.SITE_BASE_URL = `http://localhost:${port}`;
@@ -30,7 +41,7 @@ async function startScript(name: string) {
 }
 for (const name of listEntries('scripts')) await startScript(name);
 
-// meta.ts の変更や新しいフォルダは vite の watch に入らないので、ここで拾って作り直す
+// vite's watcher doesn't see meta.ts changes or new folders, so catch them here and rebuild
 let timer: NodeJS.Timeout | undefined;
 const pending = new Set<string>();
 watch(join(root, 'scripts'), { recursive: true }, (_event, file) => {
@@ -81,6 +92,19 @@ const types: Record<string, string> = {
 };
 createServer((req, res) => {
   const path = decodeURIComponent(new URL(req.url ?? '/', 'http://x').pathname);
+
+  const dev = path.match(/^\/dev\/([a-z0-9-]+)\.user\.js$/);
+  if (dev?.[1]) {
+    const built = join(distDir, 'scripts', `${dev[1]}.user.js`);
+    if (!existsSync(built)) {
+      res.writeHead(404).end('not found');
+      return;
+    }
+    res.writeHead(200, { 'content-type': types['.js'], 'cache-control': 'no-store' });
+    res.end(devLoader(readFileSync(built, 'utf8'), dev[1], `http://localhost:${port}`));
+    return;
+  }
+
   let file = normalize(join(distDir, path));
   if (!file.startsWith(distDir)) {
     res.writeHead(403).end();
@@ -102,6 +126,8 @@ createServer((req, res) => {
     .find((i) => i?.family === 'IPv4' && !i.internal)?.address;
   console.log(`\n  dev server: http://localhost:${port}/`);
   if (lan)
-    console.log(`  (同じネットワークの別端末からは http://${lan}:${port}/ で一覧が見えます)`);
-  console.log('  変更は拡張機能の「更新を確認」で取り込めます\n');
+    console.log(`  (other devices on the same network can see the list at http://${lan}:${port}/)`);
+  console.log(
+    `  install the dev script http://localhost:${port}/dev/<name>.user.js and just reload the page\n`,
+  );
 });

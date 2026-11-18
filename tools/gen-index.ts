@@ -10,9 +10,9 @@ import {
   styleFile,
 } from './lib.ts';
 
-// ---- 小さな HTML テンプレート ----------------------------------------------
-// html`...` の ${} に入れた値は自動でエスケープされる。
-// html`...` の結果や配列はそのまま埋め込めるので、部品を組み合わせて書ける。
+// ---- Tiny HTML templates ---------------------------------------------------
+// Values in ${} inside html`...` are escaped automatically.
+// Results of html`...` and arrays are embedded as-is, so parts can be composed.
 
 class Html {
   readonly value: string;
@@ -34,13 +34,13 @@ function html(strings: TemplateStringsArray, ...values: unknown[]): Html {
   return new Html(strings.reduce((out, s, i) => out + render(values[i - 1]) + s));
 }
 
-/** 信頼できる文字列（自前の CSS/JS）をエスケープせずに埋め込む。 */
+/** Embeds a trusted string (our own CSS/JS) without escaping. */
 const raw = (s: string) => new Html(s);
 
 const asset = (file: string) =>
   raw(readFileSync(join(import.meta.dirname, 'index-page', file), 'utf8'));
 
-// ---- ページの部品 ----------------------------------------------------------
+// ---- Page parts ------------------------------------------------------------
 
 type Entry = { title: string; version: string; description: string; url: string };
 
@@ -81,9 +81,9 @@ ${asset('copy.js')}
 </html>
 `;
 
-// ---- データ集め → 書き出し --------------------------------------------------
+// ---- Collect data -> write -------------------------------------------------
 
-/** dist/index.html にインストール用 URL の一覧を書く。 */
+/** Writes the list of install URLs to dist/index.html. */
 export async function genIndex() {
   const scripts: Entry[] = [];
   for (const name of listEntries('scripts')) {

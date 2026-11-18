@@ -37,7 +37,7 @@ export function renderUserCss(name: string, meta: StyleMeta, css: string): strin
   return `/* ==UserStyle==\n${lines.join('\n')}\n==/UserStyle== */\n\n${css.trim()}\n`;
 }
 
-/** styles/<name>/ を dist/styles/<name>.user.css にする。 */
+/** Builds styles/<name>/ into dist/styles/<name>.user.css. */
 export function buildStyles(names = listEntries('styles')) {
   mkdirSync(join(distDir, 'styles'), { recursive: true });
   for (const name of names) {

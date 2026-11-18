@@ -1,4 +1,4 @@
-/* @var で定義した値は var(--名前) で参照できる */
+/* Values defined with @var are available as var(--name) */
 @-moz-document domain("example.com") {
   html,
   body {

@@ -6,7 +6,7 @@ import { distDir, listEntries, loadScriptMeta, root, scriptFile } from './lib.ts
 
 type Watcher = { close(): Promise<void> | void };
 
-/** scripts/<name>/ を vite でビルドし、dist/scripts/<name>.user.js に出す。 */
+/** Builds scripts/<name>/ with vite into dist/scripts/<name>.user.js. */
 export async function buildScript(
   name: string,
   { watch = false } = {},

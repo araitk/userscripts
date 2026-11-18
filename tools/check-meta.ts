@@ -13,8 +13,8 @@ import {
 } from './lib.ts';
 
 /**
- * ビルド後の dist/ を見て、拡張機能によっては動かない・配布できないメタ情報を検出する。
- * 問題が 1 つでもあればエラーの一覧を返す。
+ * Inspects the built dist/ for metadata that some extensions can't run or distribute.
+ * Returns the list of errors, if any.
  */
 export function checkMeta(): string[] {
   const errors: string[] = [];
@@ -22,10 +22,10 @@ export function checkMeta(): string[] {
 
   for (const kind of ['scripts', 'styles'] as const) {
     for (const name of listEntries(kind)) {
-      if (!NAME_RE.test(name)) err(kind, name, 'フォルダ名は kebab-case にしてください');
+      if (!NAME_RE.test(name)) err(kind, name, 'folder name must be kebab-case');
       const file = join(distDir, kind === 'scripts' ? scriptFile(name) : styleFile(name));
       if (!existsSync(file)) {
-        err(kind, name, `ビルド結果がありません (${file})`);
+        err(kind, name, `build output not found (${file})`);
         continue;
       }
       const source = readFileSync(file, 'utf8');
@@ -33,17 +33,16 @@ export function checkMeta(): string[] {
       const all = (key: string) => header.filter(([k]) => k === key).map(([, v]) => v);
       const one = (key: string) => all(key)[0];
 
-      if (!one('name')) err(kind, name, '@name がありません');
+      if (!one('name')) err(kind, name, '@name is missing');
       const version = one('version');
       if (!version || !SEMVER_RE.test(version))
-        err(kind, name, `@version が semver ではありません: ${version}`);
+        err(kind, name, `@version is not semver: ${version}`);
       const expected = `${site.baseUrl}/${kind === 'scripts' ? scriptFile(name) : styleFile(name)}`;
-      if (one('updateURL') !== expected)
-        err(kind, name, `@updateURL が ${expected} ではありません`);
+      if (one('updateURL') !== expected) err(kind, name, `@updateURL is not ${expected}`);
 
       if (kind === 'scripts') {
         if (all('match').length === 0 && all('include').length === 0) {
-          err(kind, name, '@match か @include が必要です');
+          err(kind, name, '@match or @include is required');
         }
         const grants = all('grant');
         const usesXhr = grants.some((g) => /^GM[_.]xml[hH]ttpRequest$/.test(g));
@@ -51,12 +50,12 @@ export function checkMeta(): string[] {
           err(
             kind,
             name,
-            'GM_xmlhttpRequest を使っていますが @connect がありません（拡張機能によっては通信が拒否されます）',
+            'uses GM_xmlhttpRequest without @connect (some extensions will block the requests)',
           );
         }
       } else {
         const scoped = /@-moz-document\s/.test(source) || all('match').length > 0;
-        if (!scoped) err(kind, name, '@-moz-document がなく、全サイトに適用されます');
+        if (!scoped) err(kind, name, 'no @-moz-document, so it applies to every site');
       }
     }
   }
