@@ -3,4 +3,36 @@
   .html5-video-player.ended-mode .ytp-fullscreen-grid {
     display: none !important;
   }
+
+  /*
+   * Theater mode with live chat open pins the chat to the right and narrows the player.
+   * Give the player the full width and put the chat in the column below it instead.
+   */
+  ytd-watch-flexy[theater][live-chat-present-and-expanded] {
+    /* The panel beside the player; only the chat lives there in this state */
+    #panels-full-bleed-container {
+      display: none !important;
+    }
+
+    #columns {
+      padding-right: 0 !important;
+    }
+
+    /*
+     * Fill the screen below the full-width player when scrolled to the top; keep at least 320px
+     * for wide windows, where the player is capped by the screen height instead.
+     */
+    #chat {
+      position: static !important;
+      width: auto !important;
+      height: max(
+        320px,
+        100vh -
+        var(--ytd-masthead-height-accounting-for-hidden) -
+        var(--ytd-watch-flexy-height-ratio) /
+        var(--ytd-watch-flexy-width-ratio) *
+        100vw
+      ) !important;
+    }
+  }
 }
