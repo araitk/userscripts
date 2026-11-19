@@ -11,6 +11,7 @@ import {
   scriptFile,
   styleFile,
 } from './lib.ts';
+import { parseSections } from './usercss.ts';
 
 /**
  * Inspects the built dist/ for metadata that some extensions can't run or distribute.
@@ -54,8 +55,12 @@ export function checkMeta(): string[] {
           );
         }
       } else {
-        const scoped = /@-moz-document\s/.test(source) || all('match').length > 0;
-        if (!scoped) err(kind, name, 'no @-moz-document, so it applies to every site');
+        const sections = parseSections(source);
+        if (!sections.some((s) => s.conditions)) {
+          err(kind, name, 'no @-moz-document, so it applies to every site');
+        } else if (sections.some((s) => !s.conditions)) {
+          err(kind, name, 'has rules outside @-moz-document, so they apply to every site');
+        }
       }
     }
   }

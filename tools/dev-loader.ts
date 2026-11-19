@@ -1,21 +1,22 @@
-import { parseHeader } from './lib.ts';
+import { devName, formatHeader, parseHeader, scriptFile } from './lib.ts';
 
 /** Metadata keys from the built script that the dev script does not carry over */
 const DROP = new Set(['name', 'updateURL', 'downloadURL']);
 
 /**
- * Generates the dev script (dev:<name>).
+ * Generates the dev script (dev:scripts/<name>).
  *
  * On every page load it fetches the watch-built script with GM_xmlhttpRequest and runs it inside the extension.
  * Nothing is injected into the page, so the page's CSP and mixed content (http from an https page) don't apply.
  * Some extensions only expose GM APIs inside the userscript itself, so they are passed to the script as arguments.
  */
 export function devLoader(built: string, name: string, origin: string): string {
+  const tag = `[${devName('scripts', name)}]`;
   const header = parseHeader(built);
-  const src = `${origin}/scripts/${name}.user.js`;
+  const src = `${origin}/${scriptFile(name)}`;
   const host = new URL(origin).hostname;
 
-  const lines: [string, string][] = [['name', `dev:${name}`]];
+  const lines: [string, string][] = [['name', devName('scripts', name)]];
   for (const [key, value] of header) {
     if (DROP.has(key)) continue;
     if (key === 'grant' && value === 'none') continue;
@@ -38,11 +39,8 @@ export function devLoader(built: string, name: string, origin: string): string {
     `    unsafeWindow: typeof unsafeWindow != 'undefined' ? unsafeWindow : window,`,
   ].join('\n');
 
-  const width = Math.max(...lines.map(([k]) => k.length)) + 2;
-  const meta = lines.map(([k, v]) => `// @${k.padEnd(width - 1)}${v}`.trimEnd()).join('\n');
-
   return `// ==UserScript==
-${meta}
+${formatHeader(lines, '// ')}
 // ==/UserScript==
 
 // For development. Loads and runs ${src} on every page load.
@@ -57,14 +55,14 @@ ${apis}
     url: \`\${src}?t=\${Date.now()}\`,
     onload(res) {
       if (res.status !== 200) {
-        console.error(\`[dev:${name}] failed to load (\${res.status})\`, src);
+        console.error(\`${tag} failed to load (\${res.status})\`, src);
         return;
       }
       const body = res.responseText.replace(/^[\\s\\S]*?\\/\\/ ==\\/UserScript==/, '');
       new Function(...Object.keys(apis), \`\${body}\\n//# sourceURL=\${src}\`)(...Object.values(apis));
     },
     onerror(err) {
-      console.error('[dev:${name}] failed to load (is pnpm dev running?)', src, err);
+      console.error('${tag} failed to load (is pnpm dev running?)', src, err);
     },
   });
 })();

@@ -12,22 +12,59 @@ import { networkInterfaces } from 'node:os';
 import { extname, join, normalize, sep } from 'node:path';
 import { site } from '../site.config.ts';
 import { buildScript } from './build-scripts.ts';
-import { buildStyles } from './build-styles.ts';
+import { buildStyle } from './build-styles.ts';
 import { devLoader } from './dev-loader.ts';
+import { createStyleChannel } from './dev-style.ts';
 import { genIndex } from './gen-index.ts';
-import { distDir, listEntries, root } from './lib.ts';
+import {
+  devFile,
+  distDir,
+  type Kind,
+  listEntries,
+  NAME_RE,
+  noStore,
+  root,
+  scriptFile,
+} from './lib.ts';
 
 /**
  * Development: watch-builds everything and serves dist/ on localhost.
  *
- * /dev/<name>.user.js serves the dev script. With it installed, every page load picks up
+ * dev/scripts/<name>.user.js serves the dev script. With it installed, every page load picks up
  * the latest build, so saving and reloading the page is enough.
+ * dev/styles/<name>.user.js serves the style dev script, which swaps the style in place on every save.
  */
 const port = Number(process.env.PORT ?? site.devPort);
-process.env.SITE_BASE_URL = `http://localhost:${port}`;
+const origin = `http://localhost:${port}`;
+process.env.SITE_BASE_URL = origin;
 
 rmSync(distDir, { recursive: true, force: true });
 mkdirSync(distDir, { recursive: true });
+
+/**
+ * Watches scripts/ or styles/ and calls flush with the changed entries, each with the changed
+ * paths inside it ('' for the folder itself). Changes are debounced so a save is handled once.
+ */
+function watchEntries(kind: Kind, flush: (changed: Map<string, Set<string>>) => Promise<void>) {
+  let timer: NodeJS.Timeout | undefined;
+  const pending = new Map<string, Set<string>>();
+  watch(join(root, kind), { recursive: true }, (_event, file) => {
+    const [name, ...rest] = file?.split(sep) ?? [];
+    if (!name) return;
+    const files = pending.get(name) ?? new Set();
+    files.add(rest.join('/'));
+    pending.set(name, files);
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const changed = new Map(pending);
+      pending.clear();
+      flush(changed).catch((e) => console.error(e));
+    }, 100);
+  });
+}
+
+/** The index page shows names and versions, so it only changes with metadata or folders. */
+const regenIndex = () => genIndex().catch((e) => console.error(e));
 
 // ---- scripts ----
 const watchers = new Map<string, { close(): unknown } | undefined>();
@@ -41,45 +78,52 @@ async function startScript(name: string) {
 }
 for (const name of listEntries('scripts')) await startScript(name);
 
-// vite's watcher doesn't see meta.ts changes or new folders, so catch them here and rebuild
-let timer: NodeJS.Timeout | undefined;
-const pending = new Set<string>();
-watch(join(root, 'scripts'), { recursive: true }, (_event, file) => {
-  if (!file) return;
-  const [name, rest] = file.split(sep);
-  if (!name) return;
-  if (rest === 'meta.ts' || !watchers.has(name)) pending.add(name);
-  clearTimeout(timer);
-  timer = setTimeout(async () => {
-    for (const n of pending) {
-      if (
-        existsSync(join(root, 'scripts', n, 'index.ts')) &&
-        existsSync(join(root, 'scripts', n, 'meta.ts'))
-      ) {
-        await startScript(n);
-      }
+// vite's watcher doesn't see meta.ts changes, new folders or removed ones, so handle them here
+watchEntries('scripts', async (changed) => {
+  const names = listEntries('scripts');
+  let index = false;
+  for (const [name, files] of changed) {
+    if (!names.includes(name)) {
+      if (!watchers.has(name)) continue;
+      await watchers.get(name)?.close();
+      watchers.delete(name);
+      index = true;
+    } else if (
+      (files.has('meta.ts') || !watchers.has(name)) &&
+      existsSync(join(root, 'scripts', name, 'index.ts')) &&
+      existsSync(join(root, 'scripts', name, 'meta.ts'))
+    ) {
+      await startScript(name);
+      index = true;
     }
-    pending.clear();
-    await genIndex().catch((e) => console.error(e));
-  }, 200);
+  }
+  if (index) await regenIndex();
 });
 
 // ---- styles ----
-const rebuildStyles = () => {
+const styleChannel = createStyleChannel(origin);
+function rebuildStyle(name: string) {
   try {
-    buildStyles();
+    styleChannel.publish(buildStyle(name));
   } catch (e) {
-    console.error('✗ styles:', e instanceof Error ? e.message : e);
+    console.error(`✗ styles/${name}:`, e instanceof Error ? e.message : e);
   }
-};
-rebuildStyles();
-let styleTimer: NodeJS.Timeout | undefined;
-watch(join(root, 'styles'), { recursive: true }, () => {
-  clearTimeout(styleTimer);
-  styleTimer = setTimeout(async () => {
-    rebuildStyles();
-    await genIndex().catch((e) => console.error(e));
-  }, 100);
+}
+for (const name of listEntries('styles')) rebuildStyle(name);
+
+watchEntries('styles', async (changed) => {
+  const names = listEntries('styles');
+  let index = false;
+  for (const [name, files] of changed) {
+    if (!names.includes(name)) {
+      index ||= styleChannel.has(name);
+      styleChannel.remove(name);
+      continue;
+    }
+    index ||= files.has('meta.json') || !styleChannel.has(name);
+    rebuildStyle(name);
+  }
+  if (index) await regenIndex();
 });
 
 await genIndex();
@@ -91,17 +135,30 @@ const types: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
 };
 createServer((req, res) => {
-  const path = decodeURIComponent(new URL(req.url ?? '/', 'http://x').pathname);
+  const url = new URL(req.url ?? '/', 'http://x');
+  let path: string;
+  try {
+    path = decodeURIComponent(url.pathname);
+  } catch {
+    res.writeHead(400).end('bad request');
+    return;
+  }
 
-  const dev = path.match(/^\/dev\/([a-z0-9-]+)\.user\.js$/);
-  if (dev?.[1]) {
-    const built = join(distDir, 'scripts', `${dev[1]}.user.js`);
-    if (!existsSync(built)) {
+  // dev/<kind>/<name>.user.js, plus dev/styles/<name>.json for the style long-poll
+  const dev = path.match(/^\/dev\/(scripts|styles)\/([^/]+)\.(user\.js|json)$/);
+  if (dev) {
+    const [, kind, name = '', ext = ''] = dev;
+    const built = join(distDir, scriptFile(name));
+    if (!NAME_RE.test(name)) {
       res.writeHead(404).end('not found');
-      return;
+    } else if (kind === 'styles') {
+      styleChannel.handle(name, ext, url.searchParams, res);
+    } else if (ext !== 'user.js' || !existsSync(built)) {
+      res.writeHead(404).end('not found');
+    } else {
+      res.writeHead(200, noStore(types['.js'] ?? ''));
+      res.end(devLoader(readFileSync(built, 'utf8'), name, origin));
     }
-    res.writeHead(200, { 'content-type': types['.js'], 'cache-control': 'no-store' });
-    res.end(devLoader(readFileSync(built, 'utf8'), dev[1], `http://localhost:${port}`));
     return;
   }
 
@@ -115,19 +172,19 @@ createServer((req, res) => {
     res.writeHead(404).end('not found');
     return;
   }
-  res.writeHead(200, {
-    'content-type': types[extname(file)] ?? 'application/octet-stream',
-    'cache-control': 'no-store',
-  });
+  res.writeHead(200, noStore(types[extname(file)] ?? 'application/octet-stream'));
   createReadStream(file).pipe(res);
 }).listen(port, () => {
   const lan = Object.values(networkInterfaces())
     .flat()
     .find((i) => i?.family === 'IPv4' && !i.internal)?.address;
-  console.log(`\n  dev server: http://localhost:${port}/`);
+  console.log(`\n  dev server: ${origin}/`);
   if (lan)
     console.log(`  (other devices on the same network can see the list at http://${lan}:${port}/)`);
   console.log(
-    `  install the dev script http://localhost:${port}/dev/<name>.user.js and just reload the page\n`,
+    `  install the dev script ${origin}/${devFile('scripts', '<name>')} and just reload the page`,
+  );
+  console.log(
+    `  for styles, install ${origin}/${devFile('styles', '<name>')}; saving updates the page\n`,
   );
 });

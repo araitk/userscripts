@@ -1,4 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import type { OutgoingHttpHeaders } from 'node:http';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { ScriptMeta, StyleMeta } from '../shared/meta.ts';
@@ -34,6 +35,22 @@ export function loadStyleMeta(name: string): StyleMeta {
 
 export const scriptFile = (name: string) => `scripts/${name}.user.js`;
 export const styleFile = (name: string) => `styles/${name}.user.css`;
+
+/** Dev script paths and names mirror the published path: dev/<kind>/<name>.user.js is dev:<kind>/<name>. */
+export const devFile = (kind: Kind, name: string, ext = 'user.js') => `dev/${kind}/${name}.${ext}`;
+export const devName = (kind: Kind, name: string) => `dev:${kind}/${name}`;
+
+/** Headers for dev server responses, which must never be served from a cache. */
+export const noStore = (contentType: string): OutgoingHttpHeaders => ({
+  'content-type': contentType,
+  'cache-control': 'no-store',
+});
+
+/** Formats [key, value][] as aligned `@key value` header lines, each starting with prefix. */
+export function formatHeader(rows: [string, string][], prefix = ''): string {
+  const width = Math.max(...rows.map(([k]) => k.length)) + 2;
+  return rows.map(([k, v]) => `${prefix}@${k.padEnd(width)}${v}`.trimEnd()).join('\n');
+}
 
 /** Parses a `// ==UserScript==` or `/* ==UserStyle==` block into [key, value][]. */
 export function parseHeader(source: string): [string, string][] {

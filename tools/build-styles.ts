@@ -2,7 +2,10 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { StyleMeta, StyleVar } from '../shared/meta.ts';
 import { site } from '../site.config.ts';
-import { distDir, listEntries, loadStyleMeta, root, styleFile } from './lib.ts';
+import { distDir, formatHeader, listEntries, loadStyleMeta, root, styleFile } from './lib.ts';
+
+/** A style as read from styles/<name>/ (meta, css) and the .user.css it was built into (output). */
+export type BuiltStyle = { name: string; meta: StyleMeta; css: string; output: string };
 
 function formatVar(v: StyleVar): string {
   const label = JSON.stringify(v.label);
@@ -18,6 +21,14 @@ function formatVar(v: StyleVar): string {
   }
 }
 
+/** :root rule with the @var defaults, which is what applies where there is no settings UI. */
+export function varsRule(vars: StyleVar[]): string {
+  if (!vars.length) return '';
+  const value = (v: StyleVar) =>
+    v.type === 'checkbox' ? (v.default ? '1' : '0') : String(v.default);
+  return `:root {\n${vars.map((v) => `  --${v.name}: ${value(v)};`).join('\n')}\n}\n`;
+}
+
 export function renderUserCss(name: string, meta: StyleMeta, css: string): string {
   const url = `${site.baseUrl}/${styleFile(name)}`;
   const rows: [string, string][] = [
@@ -31,20 +42,21 @@ export function renderUserCss(name: string, meta: StyleMeta, css: string): strin
     ['license', meta.license ?? ''],
     ['preprocessor', 'default'],
   ];
-  const width = Math.max(...rows.map(([k]) => k.length)) + 2;
-  const lines = rows.filter(([, v]) => v).map(([k, v]) => `@${k.padEnd(width)}${v}`);
-  for (const v of meta.vars ?? []) lines.push(formatVar(v));
+  const lines = [formatHeader(rows.filter(([, v]) => v)), ...(meta.vars ?? []).map(formatVar)];
   return `/* ==UserStyle==\n${lines.join('\n')}\n==/UserStyle== */\n\n${css.trim()}\n`;
 }
 
 /** Builds styles/<name>/ into dist/styles/<name>.user.css. */
-export function buildStyles(names = listEntries('styles')) {
+export function buildStyle(name: string): BuiltStyle {
   mkdirSync(join(distDir, 'styles'), { recursive: true });
-  for (const name of names) {
-    const meta = loadStyleMeta(name);
-    const css = readFileSync(join(root, 'styles', name, 'style.css'), 'utf8');
-    writeFileSync(join(distDir, styleFile(name)), renderUserCss(name, meta, css));
-    console.log(`  style   ${name}.user.css  v${meta.version}`);
-  }
-  return names;
+  const meta = loadStyleMeta(name);
+  const css = readFileSync(join(root, 'styles', name, 'style.css'), 'utf8');
+  const output = renderUserCss(name, meta, css);
+  writeFileSync(join(distDir, styleFile(name)), output);
+  console.log(`  style   ${name}.user.css  v${meta.version}`);
+  return { name, meta, css, output };
+}
+
+export function buildStyles(names = listEntries('styles')): BuiltStyle[] {
+  return names.map(buildStyle);
 }
