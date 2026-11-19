@@ -1,0 +1,6 @@
+@-moz-document domain("youtube.com") {
+  /* Recommendation grid shown after a video ends */
+  .html5-video-player.ended-mode .ytp-fullscreen-grid {
+    display: none !important;
+  }
+}
