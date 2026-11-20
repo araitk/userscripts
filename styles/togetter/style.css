@@ -1,0 +1,15 @@
+@-moz-document domain("togetter.com") {
+  /* Override curator size classes (.f13–.f20) */
+  .list_box.type_tweet .tweet {
+    font-size: 16px;
+
+    span {
+      font-size: inherit;
+    }
+  }
+
+  /* Reader comments; class names are generated, so anchor on the id */
+  #comment-box-portal main p {
+    font-size: 16px;
+  }
+}
