@@ -4,12 +4,9 @@
     display: none !important;
   }
 
-  /*
-   * Theater mode with live chat open pins the chat to the right and narrows the player.
-   * Give the player the full width and put the chat in the column below it instead.
-   */
+  /* Theater mode with live chat: full-width player, chat moved below it */
   ytd-watch-flexy[theater][live-chat-present-and-expanded] {
-    /* The panel beside the player; only the chat lives there in this state */
+    /* The side panel, which only holds the chat here */
     #panels-full-bleed-container {
       display: none !important;
     }
@@ -18,10 +15,7 @@
       padding-right: 0 !important;
     }
 
-    /*
-     * Fill the screen below the full-width player when scrolled to the top; keep at least 320px
-     * for wide windows, where the player is capped by the screen height instead.
-     */
+    /* Fill the screen below the player (at least 320px) */
     #chat {
       position: static !important;
       width: auto !important;
@@ -33,6 +27,127 @@
         var(--ytd-watch-flexy-width-ratio) *
         100vw
       ) !important;
+    }
+  }
+
+  /* Shrink the player into the top left corner while scrolling */
+  @supports (animation-timeline: view()) and (anchor-name: --a) {
+    ytd-watch-flexy:not([fullscreen]) {
+      --yt-float-width: 400px;
+      --yt-float-height: 225px;
+      --yt-float-gap: 16px;
+      --yt-float-top: calc(
+        var(--ytd-masthead-height-accounting-for-hidden, 56px) +
+        var(--yt-float-gap)
+      );
+      timeline-scope: --yt-player;
+
+      /* The player's place in either layout */
+      #player-container {
+        anchor-name: --yt-player-place;
+        view-timeline: --yt-player block;
+      }
+
+      #movie_player,
+      #player-container,
+      #full-bleed-container,
+      #cinematics,
+      #movie_player :is(.ytp-progress-bar-container, .ytp-scrubber-container) {
+        animation-timeline: --yt-player;
+        animation-range: exit 0 exit 1px;
+        animation-fill-mode: forwards;
+        animation-timing-function: linear;
+      }
+
+      /* Ends when its place's bottom meets the small player's, so the bottoms stay aligned */
+      #movie_player {
+        position-anchor: --yt-player-place;
+        animation-name: yt-float;
+        animation-range: exit 0% exit calc(100% - var(--yt-float-top) - var(--yt-float-height));
+      }
+
+      /* Keeps the player on top; only once it leaves, as these also hold the large ambient canvas */
+      #player-container,
+      #full-bleed-container {
+        animation-name: yt-float-raise;
+      }
+
+      /* Ambient light around the empty place */
+      #cinematics {
+        animation-name: yt-float-hide;
+      }
+
+      /* YouTube sizes these in px; follow the changing player size */
+      #movie_player :is(.html5-video-container, video) {
+        width: 100% !important;
+        height: 100% !important;
+        left: 0 !important;
+        top: 0 !important;
+      }
+
+      #movie_player .ytp-chrome-bottom {
+        width: calc(100% - 24px) !important;
+      }
+
+      /* Chapters shrink in proportion with the bar */
+      #movie_player .ytp-chapters-container {
+        display: flex;
+      }
+
+      #movie_player .ytp-chapter-hover-container {
+        flex: 0 1 auto;
+        min-width: 0;
+      }
+
+      /* Clicks would seek by the full-size width; also keeps the hover parts hidden */
+      #movie_player .ytp-progress-bar-container {
+        animation-name: yt-float-no-pointer;
+      }
+
+      /* Positioned in px from the full-size bar */
+      #movie_player .ytp-scrubber-container {
+        animation-name: yt-float-hide;
+      }
+    }
+
+    @keyframes yt-float {
+      /* Not anchor(top), which would follow the page while scrolling */
+      from {
+        position: fixed;
+        top: 0;
+        left: anchor(left);
+        width: anchor-size(width);
+        height: anchor-size(height);
+        /* Covers letterbox bars, which are transparent */
+        background: #000;
+      }
+
+      to {
+        position: fixed;
+        top: var(--yt-float-top);
+        left: var(--yt-float-gap);
+        width: var(--yt-float-width);
+        height: var(--yt-float-height);
+        background: #000;
+      }
+    }
+
+    @keyframes yt-float-raise {
+      to {
+        z-index: 2000;
+      }
+    }
+
+    @keyframes yt-float-hide {
+      to {
+        visibility: hidden;
+      }
+    }
+
+    @keyframes yt-float-no-pointer {
+      to {
+        pointer-events: none;
+      }
     }
   }
 }
