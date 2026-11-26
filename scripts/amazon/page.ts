@@ -15,6 +15,20 @@ export function getAsin(): string | undefined {
 /** Search results live under /s (e.g. /s?k=…, /s/ref=…, /-/en/s?k=…). */
 export const isSearchPage = () => /\/s(?:\/|$)/.test(location.pathname);
 
+/**
+ * URL of the current search. Safari's tracking protection can hide the query string from
+ * location (e.g. after a reload), so prefer the sort form, whose fields carry the current search.
+ */
+export function currentSearchUrl(): URL {
+  const form = document.querySelector<HTMLSelectElement>('#s-result-sort-select')?.form;
+  if (!form) return new URL(location.href);
+  const url = new URL(form.action);
+  for (const [key, value] of new FormData(form)) {
+    if (typeof value === 'string') url.searchParams.append(key, value);
+  }
+  return url;
+}
+
 export const isProductPage = () =>
   !!getAsin() && !!document.querySelector('#dp, #dp-container, #ppd');
 

@@ -8,8 +8,8 @@ export const amazonOfferUrl = (asin: string, seller: string) => `${shortUrl(asin
  * Search URL limited to items sold by Amazon.
  * rh is comma-separated (e.g. "p_6:ID,p_n_xxx:yyy"), so other filters are kept and only p_6 is replaced.
  */
-export function amazonOnlySearchUrl(href: string, seller: string) {
-  const url = new URL(href);
+export function amazonOnlySearchUrl(search: URL, seller: string) {
+  const url = new URL(search);
   const rest = (url.searchParams.get('rh') ?? '')
     .split(',')
     .filter((p) => p && !p.startsWith('p_6:'));

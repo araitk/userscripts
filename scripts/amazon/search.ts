@@ -2,7 +2,7 @@ import { onElement } from '../../shared/dom.ts';
 import { messages } from './i18n.ts';
 import { amazonOnlySearchUrl } from './links.ts';
 import type { CurrentMarket } from './markets.ts';
-import { createBar, createLink } from './page.ts';
+import { createBar, createLink, currentSearchUrl } from './page.ts';
 
 export function setupSearchPage(market: CurrentMarket) {
   const seller = market.seller;
@@ -13,7 +13,7 @@ export function setupSearchPage(market: CurrentMarket) {
 
   // Filtering or sorting can change the URL without a page load, so build the target when the link is about to be used
   const refresh = () => {
-    a.href = amazonOnlySearchUrl(location.href, seller);
+    a.href = amazonOnlySearchUrl(currentSearchUrl(), seller);
   };
   for (const type of ['pointerenter', 'focus']) a.addEventListener(type, refresh);
   // An <a> without href is neither focusable nor styled as a link, so set one up front
