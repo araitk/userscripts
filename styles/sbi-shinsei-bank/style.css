@@ -1,0 +1,6 @@
+@-moz-document domain("bk.web.sbishinseibank.co.jp") {
+  /* Hide the dummy password field to enable autofill */
+  input[name="dummy_password"] {
+    display: none;
+  }
+}
