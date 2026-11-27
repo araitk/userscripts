@@ -1,7 +1,8 @@
 import { GM_addStyle } from '$';
+import { setupAutoDeliveriesPage } from './auto-deliveries.ts';
 import { setupBuyAgainPage } from './buyagain.ts';
 import { currentMarket } from './markets.ts';
-import { isBuyAgainPage, isProductPage, isSearchPage } from './page.ts';
+import { isAutoDeliveriesPage, isBuyAgainPage, isProductPage, isSearchPage } from './page.ts';
 import { setupProductPage } from './product.ts';
 import { setupSearchPage } from './search.ts';
 
@@ -18,5 +19,6 @@ const market = currentMarket();
 if (market) {
   if (isSearchPage()) setupSearchPage(market);
   else if (isBuyAgainPage()) setupBuyAgainPage(market);
+  else if (isAutoDeliveriesPage()) setupAutoDeliveriesPage(market);
   else if (isProductPage()) setupProductPage(market);
 }

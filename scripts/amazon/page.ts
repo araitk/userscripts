@@ -4,6 +4,9 @@ import type { CurrentMarket } from './markets.ts';
 
 const ASIN_IN_PATH = /\/(?:dp|gp\/product|gp\/aw\/d)\/([A-Z0-9]{10})(?:[/?#]|$)/i;
 
+/** ASIN in a product URL path (e.g. /dp/ASIN, /gp/product/ASIN). */
+export const asinFromPath = (path: string) => path.match(ASIN_IN_PATH)?.[1]?.toUpperCase();
+
 /**
  * ASIN of the product page. Prefers the buy form's input#ASIN, which follows variation
  * switches even when the URL keeps the parent ASIN, then the URL, then any ASIN input.
@@ -11,8 +14,8 @@ const ASIN_IN_PATH = /\/(?:dp|gp\/product|gp\/aw\/d)\/([A-Z0-9]{10})(?:[/?#]|$)/
 export function getAsin(): string | undefined {
   const own = document.querySelector<HTMLInputElement>('input#ASIN')?.value;
   if (own) return own;
-  const fromPath = location.pathname.match(ASIN_IN_PATH)?.[1];
-  if (fromPath) return fromPath.toUpperCase();
+  const fromPath = asinFromPath(location.pathname);
+  if (fromPath) return fromPath;
   return document.querySelector<HTMLInputElement>('input[name="ASIN"]')?.value || undefined;
 }
 
@@ -35,6 +38,9 @@ export function currentSearchUrl(): URL {
 
 /** Buy Again page (/gp/buyagain). */
 export const isBuyAgainPage = () => /\/gp\/buyagain(?:\/|$)/.test(location.pathname);
+
+/** Subscribe & Save management page (/auto-deliveries). */
+export const isAutoDeliveriesPage = () => /\/auto-deliveries(?:\/|$)/.test(location.pathname);
 
 export const isProductPage = () =>
   !!getAsin() && !!document.querySelector('#dp, #dp-container, #ppd');
