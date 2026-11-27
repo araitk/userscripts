@@ -45,11 +45,10 @@ export function setupProductPage(market: CurrentMarket) {
   };
 
   update();
-  // Switching variations can replace the buy box, so follow each new one. Pages without it show nothing
+  // Switching variations replaces the buy box along with the ASIN input in it, so follow each new one.
+  // Pages without it show nothing
   onElement('#buybox', (buybox) => {
     buybox.after(box);
     update();
   });
-  // Choosing a variation can change the ASIN without replacing the buy box
-  setInterval(update, 1000);
 }
