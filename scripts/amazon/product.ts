@@ -1,9 +1,9 @@
 import { GM_setClipboard } from '$';
 import { onElement } from '../../shared/dom.ts';
 import { messages } from './i18n.ts';
-import { amazonOfferUrl, keepaGraphUrl, keepaProductUrl, shortUrl } from './links.ts';
+import { amazonOfferUrl, shortUrl } from './links.ts';
 import type { CurrentMarket } from './markets.ts';
-import { createBar, createLink, getAsin } from './page.ts';
+import { createBar, createKeepaGraph, createLink, getAsin } from './page.ts';
 
 export function setupProductPage(market: CurrentMarket) {
   const t = messages();
@@ -27,23 +27,12 @@ export function setupProductPage(market: CurrentMarket) {
     : undefined;
   const bar = createBar(short, offer?.link);
 
-  // Graph image. Clicking it opens the product on Keepa
-  const graph = document.createElement('a');
-  graph.className = 'us-amazon-keepa';
-  graph.target = '_blank';
-  graph.rel = 'noopener';
-  const img = document.createElement('img');
-  img.alt = t.keepaGraph;
-  // Hide it if it fails to load (e.g. blocked by Amazon)
-  img.addEventListener('error', () => {
-    graph.hidden = true;
-  });
-  graph.append(img);
+  const graph = createKeepaGraph(market);
 
   // Put the links and the graph together below the buy box in the right column
   const box = document.createElement('div');
   box.className = 'us-amazon-box';
-  box.append(bar, graph);
+  box.append(bar, graph.element);
 
   let current: string | undefined;
   const update = () => {
@@ -52,9 +41,7 @@ export function setupProductPage(market: CurrentMarket) {
     current = asin;
     short.href = shortUrl(asin);
     if (offer) offer.link.href = amazonOfferUrl(asin, offer.seller);
-    graph.href = keepaProductUrl(market.keepa, asin);
-    img.src = keepaGraphUrl(market.tld, asin);
-    graph.hidden = false;
+    graph.show(asin);
   };
 
   update();
@@ -63,6 +50,6 @@ export function setupProductPage(market: CurrentMarket) {
     buybox.after(box);
     update();
   });
-  // Choosing a color or size can change the ASIN without replacing the buy box
+  // Choosing a variation can change the ASIN without replacing the buy box
   setInterval(update, 1000);
 }

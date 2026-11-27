@@ -1,6 +1,7 @@
 import { GM_addStyle } from '$';
+import { setupBuyAgainPage } from './buyagain.ts';
 import { currentMarket } from './markets.ts';
-import { isProductPage, isSearchPage } from './page.ts';
+import { isBuyAgainPage, isProductPage, isSearchPage } from './page.ts';
 import { setupProductPage } from './product.ts';
 import { setupSearchPage } from './search.ts';
 
@@ -16,5 +17,6 @@ GM_addStyle(`
 const market = currentMarket();
 if (market) {
   if (isSearchPage()) setupSearchPage(market);
+  else if (isBuyAgainPage()) setupBuyAgainPage(market);
   else if (isProductPage()) setupProductPage(market);
 }
