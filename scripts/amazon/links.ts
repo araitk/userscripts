@@ -21,7 +21,10 @@ export function amazonOnlySearchUrl(search: URL, seller: string) {
 export const keepaProductUrl = (keepa: number, asin: string) =>
   `https://keepa.com/#!product/${keepa}-${asin}`;
 
-/** Keepa price history graph image (no API key needed). domain is the part after "amazon." (e.g. co.jp). */
+/**
+ * Keepa price history graph image (no API key needed). domain is the part after "amazon." (e.g. co.jp).
+ * Embedding keepaBox.html in an iframe instead keeps loading forever without the Keepa extension's sign-in.
+ */
 export function keepaGraphUrl(tld: string, asin: string) {
   const params = new URLSearchParams({
     asin,
