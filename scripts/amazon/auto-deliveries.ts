@@ -1,6 +1,6 @@
 import { onElement } from '../../shared/dom.ts';
 import type { CurrentMarket } from './markets.ts';
-import { asinFromPath, createKeepaGraph } from './page.ts';
+import { asinFromPath, createBox, createKeepaGraph } from './page.ts';
 
 /**
  * Shows the Keepa graph at the end of the menu in the subscription detail modal.
@@ -17,9 +17,6 @@ export function setupAutoDeliveriesPage(market: CurrentMarket) {
     if (!asin) return;
     const graph = createKeepaGraph(market);
     graph.show(asin);
-    const box = document.createElement('div');
-    box.className = 'us-amazon-box';
-    box.append(graph.element);
-    menu.append(box);
+    menu.append(createBox(graph.element));
   });
 }

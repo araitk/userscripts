@@ -3,7 +3,7 @@ import { onElement } from '../../shared/dom.ts';
 import { messages } from './i18n.ts';
 import { amazonOfferUrl, shortUrl } from './links.ts';
 import type { CurrentMarket } from './markets.ts';
-import { createBar, createKeepaGraph, createLink, getAsin } from './page.ts';
+import { createBar, createBox, createKeepaGraph, createLink, getAsin } from './page.ts';
 
 export function setupProductPage(market: CurrentMarket) {
   const t = messages();
@@ -30,9 +30,7 @@ export function setupProductPage(market: CurrentMarket) {
   const graph = createKeepaGraph(market);
 
   // Put the links and the graph together below the buy box in the right column
-  const box = document.createElement('div');
-  box.className = 'us-amazon-box';
-  box.append(bar, graph.element);
+  const box = createBox(bar, graph.element);
 
   let current: string | undefined;
   const update = () => {
@@ -44,7 +42,6 @@ export function setupProductPage(market: CurrentMarket) {
     graph.show(asin);
   };
 
-  update();
   // Switching variations replaces the buy box along with the ASIN input in it, so follow each new one.
   // Pages without it show nothing
   onElement('#buybox', (buybox) => {

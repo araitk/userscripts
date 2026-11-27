@@ -12,11 +12,12 @@ export const asinFromPath = (path: string) => path.match(ASIN_IN_PATH)?.[1]?.toU
  * switches even when the URL keeps the parent ASIN, then the URL, then any ASIN input.
  */
 export function getAsin(): string | undefined {
-  const own = document.querySelector<HTMLInputElement>('input#ASIN')?.value;
-  if (own) return own;
-  const fromPath = asinFromPath(location.pathname);
-  if (fromPath) return fromPath;
-  return document.querySelector<HTMLInputElement>('input[name="ASIN"]')?.value || undefined;
+  return (
+    document.querySelector<HTMLInputElement>('input#ASIN')?.value ||
+    asinFromPath(location.pathname) ||
+    document.querySelector<HTMLInputElement>('input[name="ASIN"]')?.value ||
+    undefined
+  );
 }
 
 /** Search results live under /s (e.g. /s?k=…, /s/ref=…, /-/en/s?k=…). */
@@ -57,6 +58,14 @@ export function createBar(...links: (HTMLElement | undefined)[]) {
   bar.className = 'us-amazon-bar';
   bar.append(...links.filter((l) => l !== undefined));
   return bar;
+}
+
+/** Container for what this script adds to a page. */
+export function createBox(...children: HTMLElement[]) {
+  const box = document.createElement('div');
+  box.className = 'us-amazon-box';
+  box.append(...children);
+  return box;
 }
 
 /** Keepa price history graph. Clicking it opens the product on Keepa; hidden if the image fails to load. */

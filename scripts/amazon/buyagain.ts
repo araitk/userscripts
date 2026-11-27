@@ -1,5 +1,5 @@
 import type { CurrentMarket } from './markets.ts';
-import { createKeepaGraph } from './page.ts';
+import { createBox, createKeepaGraph } from './page.ts';
 
 /**
  * Shows the Keepa graph in the product detail side sheet, between the seller info and the buy buttons.
@@ -7,9 +7,7 @@ import { createKeepaGraph } from './page.ts';
  */
 export function setupBuyAgainPage(market: CurrentMarket) {
   const graph = createKeepaGraph(market);
-  const box = document.createElement('div');
-  box.className = 'us-amazon-box';
-  box.append(graph.element);
+  const box = createBox(graph.element);
 
   let current: string | undefined;
   const sync = () => {
